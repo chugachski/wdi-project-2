@@ -5,13 +5,14 @@ var coords = {};
 var evArr = [];
 var search = document.querySelector('#search-button');
 var artist = document.querySelector('#artist-box');
+var beURL = 'http://localhost:3000';
 
+// ev listener on search button that inits api call to bandplanner api
 search.addEventListener('click', function(e) {
   e.preventDefault();
-
   var artistReq = artist.value.toLowerCase();
   console.log('search button clicked, INPUT:', artistReq);
-  var beURL = 'http://localhost:3000';
+
   var data = {
     artist: artistReq
   }
@@ -22,12 +23,14 @@ search.addEventListener('click', function(e) {
     method: 'POST',
     dataType: 'json'
   }).done(function(response) {
-    console.log("response:", response);
+    console.log('response:', response);
     makeEventO(response);
     dispEv(evArr, artistReq);
+    lastFmAuth();
   }); // end ajax
 });
 
+// make an object containing only relevant data and push to evArr
 function makeEventO(resp) {
   var evObj = {};
   for (var i=0; i<resp.length; i++) {
@@ -35,20 +38,23 @@ function makeEventO(resp) {
     for (var prop in resp[i]) {
 
       if (prop === 'venue') {
-        evObj['name'] = (resp[i]).venue.name;
-        evObj['city'] = (resp[i]).venue.city;
-        evObj['region'] =(resp[i]).venue.region;
+        evObj['name'] = resp[i].venue.name;
+        evObj['city'] = resp[i].venue.city;
+        evObj['region'] =resp[i].venue.region;
         evObj['latitude'] = parseFloat(resp[i].venue.latitude);
         evObj['longitude'] = parseFloat(resp[i].venue.longitude);
       }
+      if (prop === 'artists') { // might have to rework if multiple artists
+        evObj['artists'] = resp[i][prop][0].name;
+      }
       if (prop === 'formatted_datetime') {
-        evObj['formatted_datetime'] = (resp[i])[prop];
+        evObj['formatted_datetime'] = resp[i][prop];
       }
       if (prop === 'ticket_status') {
-        evObj['ticket_status'] = (resp[i])[prop];
+        evObj['ticket_status'] = resp[i][prop];
       }
       if (prop === 'ticket_url') {
-        evObj['ticket_url'] = (resp[i])[prop];
+        evObj['ticket_url'] = resp[i][prop];
       }
     }
     evArr.push(evObj);
@@ -58,6 +64,7 @@ function makeEventO(resp) {
   return evArr;
 }
 
+// display events to screen based on objects in evArr
 function dispEv(evArr, artist) {
   var name = artist.toUpperCase();
   var results = document.querySelector('#results');
@@ -120,6 +127,32 @@ function dispEv(evArr, artist) {
   }
 }
 
+function lastFmAuth() {
+  $.ajax({
+    url: beURL + '/planner/auth',
+
+    dataType: 'json'
+  }).done(function(response) {
+    console.log(response);
+  })
+}
+
+function fmReq(evArr) {
+  var data = {
+    artist: evArr.artists
+  }
+
+  $.ajax({
+    url: beURL + '/planner/song',
+    data: data,
+    method: 'POST',
+    dataType: 'json'
+  }).done(function(response) {
+    console.log('response:', response)
+  }) // end ajax
+}
+
+// use geolocation to locate position of user
 nav.getCurrentPosition(function(position) {
   var lat = position.coords.latitude;
   var lon = position.coords.longitude;
@@ -133,8 +166,8 @@ nav.getCurrentPosition(function(position) {
   initMap(coords.lat, coords.lon);
 });
 
+// init the google map with marker for user
 function initMap(lat, lon) {
-  console.log('initializing map...');
 
   var map = new google.maps.Map(document.querySelector('#map'), {
     center: {lat: 39.8, lng: -98.6},

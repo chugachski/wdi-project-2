@@ -25,17 +25,57 @@ app.post('/planner/search', function(req, res) { // posting to localhost:3000/pl
   var format = '/events.json?api_version=2.0&app_id=';
   var end = 'BAND_PLANNER_APP';
   var fullQuery = endpoint + searchInput + format + end;
-  console.log("fullQuery:", fullQuery); // prints to terminal
+  console.log('fullQuery:', fullQuery); // prints to terminal
+
+  request({
+    url: fullQuery,
+    method: 'GET',
+    callback: function(error, response, body) {
+      res.send(body);
+    }
+  })
+}); // end post request
+
+/* last.fm auth */
+app.get('/planner/auth', function(req, res) {
+
+  var url = 'http://www.last.fm/api/auth';
+  var LAST_FM_API_KEY = process.env.LAST_FM_API_KEY;
+  var fullQuery = url + '/?api_key' + LAST_FM_API_KEY;
+  console.log('fullQuery:', fullQuery);
 
   request({
     url: fullQuery,
     method: 'GET',
     callback: function(error, response, body) {
       console.log(body);
+  }
+})
+})
+
+/* last.fm api search */
+app.post('/planner/song', function(req, res) {
+
+  // ex url
+  // /2.0/?method=artist.gettoptracks&artist=cher&api_key=YOUR_API_KEY&format=json
+
+  var endpoint = '/2.0/?method=artist.gettoptracks&artist=cher';
+
+  var LAST_FM_API_KEY = process.env.LAST_FM_API_KEY;
+  var format = '&format=json'
+  var fullQuery = endpoint + '&api_key=' + LAST_FM_API_KEY + format
+
+  request({
+    url: fullQuery,
+    method: 'GET',
+    callback: function(error, response, body) {
       res.send(body);
     }
   })
-}); // end post request
+
+  auth.getSession(token, api_key, api_sig)
+
+})
 
 app.listen(3000, function(){
   console.log('listen to events on a "port".')
