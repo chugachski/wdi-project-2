@@ -5,6 +5,9 @@ var mongodb     = require('mongodb');
 var request     = require('request');
 var app         = express();
 
+// naming the db collection
+var EVENTS_COLLECTION = 'events';
+
 /* let's add the ability ajax to our server from anywhere! */
 app.use(cors());
 
@@ -16,6 +19,15 @@ var MongoClient = mongodb.MongoClient;
 
 /* Connection url where your mongodb server is running. */
 var mongoUrl = 'mongodb://localhost:27017/api-project';
+mongodb.MongoClient.connect(process.env.MONGODB_URL || mongoUrl, function(err, database){
+    if (err){
+        console.log(err);
+        process.exit(1);
+    }
+    //naming the db
+    db = database;
+    console.log('Database ready');
+});
 
 /* bands in town api search */
 app.post('/planner/search', function(req, res) { // posting to localhost:3000/planner/search
@@ -36,34 +48,14 @@ app.post('/planner/search', function(req, res) { // posting to localhost:3000/pl
   })
 }); // end post request
 
-/* last.fm auth */
-app.get('/planner/auth', function(req, res) {
+/* spotify api id search */
+app.post('/artist/id', function(req, res) {
 
-  var url = 'http://www.last.fm/api/auth';
-  var LAST_FM_API_KEY = process.env.LAST_FM_API_KEY;
-  var fullQuery = url + '/?api_key' + LAST_FM_API_KEY;
-  console.log('fullQuery:', fullQuery);
-
-  request({
-    url: fullQuery,
-    method: 'GET',
-    callback: function(error, response, body) {
-      console.log(body);
-  }
-})
-})
-
-/* last.fm api search */
-app.post('/planner/song', function(req, res) {
-
-  // ex url
-  // /2.0/?method=artist.gettoptracks&artist=cher&api_key=YOUR_API_KEY&format=json
-
-  var endpoint = '/2.0/?method=artist.gettoptracks&artist=cher';
-
-  var LAST_FM_API_KEY = process.env.LAST_FM_API_KEY;
-  var format = '&format=json'
-  var fullQuery = endpoint + '&api_key=' + LAST_FM_API_KEY + format
+  var baseUrl = 'https://api.spotify.com/v1';
+  var searchInput = req.body.artist
+  var endpoint = '/search?q=' + searchInput + '&type=artist';
+  var fullQuery = baseUrl + endpoint;
+  console.log('fullQuery:', fullQuery); // prints to terminal
 
   request({
     url: fullQuery,
@@ -72,11 +64,43 @@ app.post('/planner/song', function(req, res) {
       res.send(body);
     }
   })
+}); // end post request
 
-  auth.getSession(token, api_key, api_sig)
+/* spotify api artist top tracks search */
+/* https://api.spotify.com/v1/artists/{id}/top-tracks */
+app.post('/artist/name', function(req, res) {
 
+  var baseUrl = 'https://api.spotify.com/v1';
+  var endpoint = '/artists/' + req.body.id + '/top-tracks' + '?country=US';
+  var fullQuery = baseUrl + endpoint;
+  console.log('SPOT:', fullQuery);
+
+  request({
+    url: fullQuery,
+    method: 'GET',
+    callback: function(error, response, body) {
+      console.log(body);
+      res.send(body);
+    }
+  })
+})
+
+
+/* post to DB */
+app.post('/events/new', function(req, res) {
+  var newEvent = req.body
+  db.collection(EVENTS_COLLECTION).insertOne(newEvent, function(err, result) {
+    if (err) {
+      console.log("Error: " + err);
+      res.json('Error');
+    } else {
+      console.log('Event added');
+      res.json(result);
+    }
+    });
 })
 
 app.listen(3000, function(){
-  console.log('listen to events on a "port".')
-});
+    console.log('listen to events on a "port".')
+  });
+

@@ -3,9 +3,13 @@ console.log('main.js loaded');
 var nav = navigator.geolocation; // get back nav object
 var coords = {};
 var evArr = [];
+var map;
 var search = document.querySelector('#search-button');
 var artist = document.querySelector('#artist-box');
 var beURL = 'http://localhost:3000';
+var addCal;
+var infoWinArr = [];
+
 
 // ev listener on search button that inits api call to bandplanner api
 search.addEventListener('click', function(e) {
@@ -25,10 +29,41 @@ search.addEventListener('click', function(e) {
   }).done(function(response) {
     console.log('response:', response);
     makeEventO(response);
-    dispEv(evArr, artistReq);
-    lastFmAuth();
+    callCreate(evArr);
+    spotifyId(data);
   }); // end ajax
 });
+
+// get back an artist id
+function spotifyId(data) {
+  $.ajax({
+    url: beURL + '/artist/id',
+    data: data,
+    method: 'POST',
+    dataType: 'json'
+  }).done(function(response) {
+    console.log('response:', response);
+    var id = response.artists.items[0].id
+    spotifyReq(id);
+  }); // end ajax
+}
+
+// get back artist top tracks
+// https://api.spotify.com/v1/artists/{id}/top-tracks
+function spotifyReq(artistId) {
+  var data = {
+    id: artistId
+  }
+
+  $.ajax({
+    url: beURL + '/artist/name',
+    method: 'POST',
+    data: data,
+    dataType: 'json'
+  }).done(function(response) {
+    console.log('SPOT resp:', response);
+  })
+}
 
 // make an object containing only relevant data and push to evArr
 function makeEventO(resp) {
@@ -64,94 +99,6 @@ function makeEventO(resp) {
   return evArr;
 }
 
-// display events to screen based on objects in evArr
-function dispEv(evArr, artist) {
-  var name = artist.toUpperCase();
-  var results = document.querySelector('#results');
-  var div = document.createElement('div');
-  div.classList.add('event');
-  var header = document.createElement('h3');
-  var text = document.createTextNode(name);
-  header.appendChild(text);
-  div.appendChild(header);
-  results.appendChild(div);
-
-  for (var i=0; i<=3; i++) {
-    var ul = document.createElement('ul');
-    var addFav = document.createElement('button');
-    var buttonText = document.createTextNode('Add to calendar');
-    addFav.classList.add('favorite-button');
-    addFav.appendChild(buttonText);
-    div.appendChild(ul);
-    div.appendChild(addFav);
-    // initListener(addFav, evArr[i]);
-
-    for (var prop in evArr[i]) {
-      if (prop === 'name') {
-        var li = document.createElement('li');
-        var liText = document.createTextNode((evArr[i])[prop]);
-        li.appendChild(liText);
-        ul.appendChild(li);
-      }
-
-      if (prop === 'formatted_datetime') {
-        var li = document.createElement('li');
-        var liText = document.createTextNode((evArr[i])[prop]);
-        li.appendChild(liText);
-        ul.appendChild(li);
-      }
-
-      if (prop === 'ticket_status' && evArr[i][prop] === 'available') {
-        var li = document.createElement('li');
-        var anc = document.createElement('a');
-        var ancText = document.createTextNode('Buy Tickets Online');
-        anc.appendChild(ancText);
-        anc.setAttribute('href', evArr[i]['ticket_url']);
-        anc.setAttribute('target', '_blank');
-        li.appendChild(anc);
-        ul.appendChild(li);
-      } else if (prop === 'ticket_status' && evArr[i][prop] === 'unavalable') {
-        var li = document.createElement('li');
-        var liText = document.createTextNode('Tickets sold out');
-        li.appendChild(liText);
-        ul.appendChild(li);
-      }
-
-      if (prop === 'city') {
-        var li = document.createElement('li');
-        var liText = document.createTextNode((evArr[i])[prop] + ', ' + evArr[i]['region']);
-        li.appendChild(liText);
-        ul.appendChild(li);
-      }
-    }
-  }
-}
-
-function lastFmAuth() {
-  $.ajax({
-    url: beURL + '/planner/auth',
-
-    dataType: 'json'
-  }).done(function(response) {
-    console.log(response);
-  })
-}
-
-function fmReq(evArr) {
-  var data = {
-    artist: evArr.artists
-  }
-
-  $.ajax({
-    url: beURL + '/planner/song',
-    data: data,
-    method: 'POST',
-    dataType: 'json'
-  }).done(function(response) {
-    console.log('response:', response)
-  }) // end ajax
-}
-
 // use geolocation to locate position of user
 nav.getCurrentPosition(function(position) {
   var lat = position.coords.latitude;
@@ -169,14 +116,89 @@ nav.getCurrentPosition(function(position) {
 // init the google map with marker for user
 function initMap(lat, lon) {
 
-  var map = new google.maps.Map(document.querySelector('#map'), {
+  var pos = {lat: parseFloat(lat), lng: parseFloat(lon)};
+  var contentStr = '<div id="home">' +
+    '<p><b>Your Current Location</b></p>' +
+    '<p>' + (parseFloat(lat)).toFixed(2) + ' &deg N</p>' +
+    '<p>' + (parseFloat(lon)).toFixed(2) + ' &deg W</p>';
+
+  map = new google.maps.Map(document.querySelector('#map'), {
     center: {lat: 39.8, lng: -98.6},
     scrollwheel: false,
-    zoom: 1
+    zoom: 4
+  });
+  console.log()
+
+  var image = '/images/azure_marker.png';
+  var marker = new google.maps.Marker({
+    position: pos,
+    map: map,
+    icon: image
   });
 
-  var marker = new google.maps.Marker({
-    position: {lat: parseFloat(lat), lng: parseFloat(lon)},
-    map: map,
-  });
+  marker.addListener('click', function() {
+    var infoWindow = new google.maps.InfoWindow ({
+      content: contentStr,
+      position: pos
+    })
+
+    closeWin();
+    infoWindow.open(map, this);
+    infoWinArr.push(infoWindow);
+  })
 }
+
+function callCreate(evArr) {
+    for (var i=0; i<5; i++) {
+      createMarker(evArr[i]);
+    }
+}
+
+function closeWin() {
+  for (var i=0; i<infoWinArr.length; i++) {
+    infoWinArr[i].close();
+  }
+}
+
+function createMarker(event) {
+  var pos = {lat: event.latitude, lng: event.longitude};
+  var contentStr = '<div id="content">' +
+    '<p><b>' + event.artists + ' @ ' + event.city + ', ' + event.region + '</b></p>' +
+    '<p>' + event.formatted_datetime + '</p>' +
+    '<p>' + event.name + '</p>' +
+    '<button id="add-cal">Add to Calendar</button>' +
+    '</div>'
+
+  var marker = new google.maps.Marker({
+    position: pos,
+    map: map
+  })
+
+  var infoWindow = new google.maps.InfoWindow ({
+    content: contentStr,
+    position: pos
+  })
+
+  marker.addListener('click', function() {
+    // console.log('infoWindow', infoWindow);
+    closeWin();
+    infoWindow.open(map, this);
+    infoWinArr.push(infoWindow);
+
+    // add to cal
+    addCal = document.querySelector('#add-cal');
+    addCal.addEventListener('click', function() {
+        $.ajax({
+          url: beURL + '/events/new',
+          data: event,
+          method: 'POST',
+          dataType: 'json'
+        }).done(function(response) {
+          console.log(response);
+        }) // end ajax
+    })
+  })
+}
+
+
+
