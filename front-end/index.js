@@ -14,8 +14,13 @@ var infoWinArr = [];
 // ev listener on search button that inits api call to bandplanner api
 search.addEventListener('click', function(e) {
   e.preventDefault();
+
+  // need to clear out markers
+  // need to clear out evArr
+  evArr = [];
+
   var artistReq = artist.value.toLowerCase();
-  console.log('search button clicked, INPUT:', artistReq);
+  console.log('Search button clicked, INPUT:', artistReq);
 
   var data = {
     artist: artistReq
@@ -27,7 +32,7 @@ search.addEventListener('click', function(e) {
     method: 'POST',
     dataType: 'json'
   }).done(function(response) {
-    console.log('response:', response);
+    console.log('BANDS events resp:', response);
     makeEventO(response);
     callCreate(evArr);
     spotifyId(data);
@@ -42,7 +47,7 @@ function spotifyId(data) {
     method: 'POST',
     dataType: 'json'
   }).done(function(response) {
-    console.log('response:', response);
+    console.log('SPOTIFY id resp:', response);
     var id = response.artists.items[0].id
     spotifyReq(id);
   }); // end ajax
@@ -61,7 +66,7 @@ function spotifyReq(artistId) {
     data: data,
     dataType: 'json'
   }).done(function(response) {
-    console.log('SPOT resp:', response);
+    console.log('SPOTIFY top tracks resp:', response);
   })
 }
 
@@ -137,14 +142,14 @@ function initMap(lat, lon) {
   });
 
   marker.addListener('click', function() {
-    var infoWindow = new google.maps.InfoWindow ({
+    var infoWin = new google.maps.InfoWindow ({
       content: contentStr,
       position: pos
     })
 
     closeWin();
-    infoWindow.open(map, this);
-    infoWinArr.push(infoWindow);
+    infoWin.open(map, this);
+    infoWinArr.push(infoWin);
   })
 }
 
@@ -158,6 +163,10 @@ function closeWin() {
   for (var i=0; i<infoWinArr.length; i++) {
     infoWinArr[i].close();
   }
+}
+
+function clearMarkers() {
+
 }
 
 function createMarker(event) {
@@ -174,7 +183,7 @@ function createMarker(event) {
     map: map
   })
 
-  var infoWindow = new google.maps.InfoWindow ({
+  var infoWin = new google.maps.InfoWindow ({
     content: contentStr,
     position: pos
   })
@@ -182,8 +191,8 @@ function createMarker(event) {
   marker.addListener('click', function() {
     // console.log('infoWindow', infoWindow);
     closeWin();
-    infoWindow.open(map, this);
-    infoWinArr.push(infoWindow);
+    infoWin.open(map, this);
+    infoWinArr.push(infoWin);
 
     // add to cal
     addCal = document.querySelector('#add-cal');

@@ -8,29 +8,30 @@ var app         = express();
 // naming the db collection
 var EVENTS_COLLECTION = 'events';
 
-/* let's add the ability ajax to our server from anywhere! */
+// let's add the ability ajax to our server from anywhere!
 app.use(cors());
 
-/* extended:true = put it in an obj */
+// extended:true = put it in an obj
 app.use(bodyParser.urlencoded({extended: true}));
 
-/* MongoClient lets us interface/connect to mongodb */
+// MongoClient lets us interface/connect to mongodb
 var MongoClient = mongodb.MongoClient;
 
-/* Connection url where your mongodb server is running. */
+// Connection url where your mongodb server is running.
 var mongoUrl = 'mongodb://localhost:27017/api-project';
 mongodb.MongoClient.connect(process.env.MONGODB_URL || mongoUrl, function(err, database){
-    if (err){
+    if (err) {
         console.log(err);
         process.exit(1);
     }
-    //naming the db
+
+    // name the db
     db = database;
     console.log('Database ready');
 });
 
-/* bands in town api search */
-app.post('/planner/search', function(req, res) { // posting to localhost:3000/planner/search
+// bands in town api artist events search
+app.post('/planner/search', function(req, res) {
 
   var endpoint = 'http://api.bandsintown.com/artists/';
   var searchInput = req.body.artist
@@ -48,7 +49,7 @@ app.post('/planner/search', function(req, res) { // posting to localhost:3000/pl
   })
 }); // end post request
 
-/* spotify api id search */
+// spotify api id search
 app.post('/artist/id', function(req, res) {
 
   var baseUrl = 'https://api.spotify.com/v1';
@@ -66,8 +67,8 @@ app.post('/artist/id', function(req, res) {
   })
 }); // end post request
 
-/* spotify api artist top tracks search */
-/* https://api.spotify.com/v1/artists/{id}/top-tracks */
+/* spotify api artist top-tracks search
+https://api.spotify.com/v1/artists/{id}/top-tracks */
 app.post('/artist/name', function(req, res) {
 
   var baseUrl = 'https://api.spotify.com/v1';
@@ -85,8 +86,7 @@ app.post('/artist/name', function(req, res) {
   })
 })
 
-
-/* post to DB */
+// post to db
 app.post('/events/new', function(req, res) {
   var newEvent = req.body
   db.collection(EVENTS_COLLECTION).insertOne(newEvent, function(err, result) {
@@ -100,7 +100,7 @@ app.post('/events/new', function(req, res) {
     });
 })
 
-app.listen(3000, function(){
+// listen on port 3000
+app.listen(3000, function() {
     console.log('listen to events on a "port".')
-  });
-
+});
